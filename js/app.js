@@ -5,7 +5,33 @@ document.addEventListener('DOMContentLoaded', () => {
   const openSearch = () => { document.getElementById('search-modal').classList.add('is-open'); document.getElementById('search-modal').setAttribute('aria-hidden', 'false'); document.getElementById('search-input').focus(); document.body.classList.add('no-scroll'); };
   const closeSearch = () => { document.getElementById('search-modal').classList.remove('is-open'); document.getElementById('search-modal').setAttribute('aria-hidden', 'true'); document.body.classList.remove('no-scroll'); };
   document.getElementById('cart-open').addEventListener('click', openCart); document.querySelectorAll('[data-close-cart]').forEach((item) => item.addEventListener('click', closeCart)); document.getElementById('search-open').addEventListener('click', openSearch); document.querySelectorAll('[data-close-search]').forEach((item) => item.addEventListener('click', closeSearch));
-  document.getElementById('menu-toggle').addEventListener('click', () => { const nav = document.getElementById('main-nav'); const isOpen = nav.classList.toggle('is-open'); document.getElementById('menu-toggle').setAttribute('aria-expanded', String(isOpen)); document.body.classList.toggle('no-scroll', isOpen); }); document.querySelectorAll('#main-nav a').forEach((link) => link.addEventListener('click', () => { document.getElementById('main-nav').classList.remove('is-open'); document.body.classList.remove('no-scroll'); }));
+  const menuToggle = document.getElementById('menu-toggle');
+  const nav = document.getElementById('main-nav');
+  const mobileLayout = window.matchMedia('(max-width: 1024px)');
+  menuToggle.setAttribute('aria-controls', 'main-nav');
+  const updateMenuBounds = () => {
+    const bottom = document.getElementById('site-header').getBoundingClientRect().bottom;
+    nav.style.setProperty('--header-bottom', `${Math.max(0, bottom)}px`);
+  };
+  const setMenuOpen = (isOpen, restoreFocus = false) => {
+    if (isOpen) window.scrollTo({ top: window.scrollY, behavior: 'instant' });
+    nav.classList.toggle('is-open', isOpen);
+    menuToggle.setAttribute('aria-expanded', String(isOpen));
+    menuToggle.setAttribute('aria-label', isOpen ? 'Cerrar menú' : 'Abrir menú');
+    if (isOpen) document.body.classList.add('no-scroll');
+    else if (!document.querySelector('.cart-drawer.is-open, .search-modal.is-open')) document.body.classList.remove('no-scroll');
+    updateMenuBounds();
+    if (restoreFocus) menuToggle.focus();
+  };
+  menuToggle.addEventListener('click', () => setMenuOpen(!nav.classList.contains('is-open')));
+  nav.querySelectorAll('a').forEach((link) => link.addEventListener('click', () => setMenuOpen(false)));
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && nav.classList.contains('is-open')) setMenuOpen(false, true);
+  });
+  mobileLayout.addEventListener('change', () => setMenuOpen(false));
+  window.addEventListener('resize', updateMenuBounds);
+  window.addEventListener('scroll', () => { if (nav.classList.contains('is-open')) updateMenuBounds(); }, { passive: true });
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', updateMenuBounds);
   document.getElementById('search-input').addEventListener('input', (event) => { const query = event.target.value.trim().toLowerCase(); const results = VapeKing.products.filter((product) => `${product.name} ${product.brand}`.toLowerCase().includes(query)).slice(0, 6); document.getElementById('search-results').innerHTML = query ? (results.length ? results.map((product) => `<button class="search-result" data-search-product="${product.id}"><img src="${product.image}" alt=""><span><strong>${product.name}</strong><small>${product.brand} · ${money(product.price)}</small></span><b>→</b></button>`).join('') : '<p class="search-empty">No encontramos coincidencias.</p>') : ''; document.querySelectorAll('[data-search-product]').forEach((button) => button.addEventListener('click', () => { closeSearch(); document.getElementById('tienda').scrollIntoView({ behavior: 'smooth' }); VapeKing.state.search = VapeKing.getProduct(Number(button.dataset.searchProduct)).name; VapeKing.renderProducts(); })); });
   document.querySelectorAll('[data-category]').forEach((button) => button.addEventListener('click', () => { VapeKing.state.category = button.dataset.category; VapeKing.state.brand = ''; document.querySelectorAll('.filter-button').forEach((item) => item.classList.toggle('is-active', item === button)); VapeKing.renderProducts(); })); document.getElementById('sort-products').addEventListener('change', (event) => { VapeKing.state.sort = event.target.value; VapeKing.renderProducts(); }); document.getElementById('clear-filters').addEventListener('click', () => { VapeKing.state = { category: 'todos', brand: '', search: '', sort: 'featured' }; document.querySelectorAll('.filter-button').forEach((item) => item.classList.toggle('is-active', item.dataset.category === 'todos')); document.getElementById('sort-products').value = 'featured'; VapeKing.renderProducts(); }); document.getElementById('filter-toggle').addEventListener('click', () => document.getElementById('shop-controls').classList.toggle('is-open'));
   document.querySelectorAll('[data-category-link]').forEach((link) => link.addEventListener('click', () => { VapeKing.state.category = link.dataset.categoryLink; document.querySelectorAll('.filter-button').forEach((item) => item.classList.toggle('is-active', item.dataset.category === VapeKing.state.category)); VapeKing.renderProducts(); })); document.getElementById('new-prev').addEventListener('click', () => document.getElementById('new-products').scrollBy({ left: -310, behavior: 'smooth' })); document.getElementById('new-next').addEventListener('click', () => document.getElementById('new-products').scrollBy({ left: 310, behavior: 'smooth' }));
